@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-nigeria-emerald: #014421;
+  --color-nigeria-green: #008751;
+  --color-nigeria-light: #F0FDF4;
+  
+  --color-charcoal: #1F2937;
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-slate-50 text-charcoal antialiased;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+  }
+}

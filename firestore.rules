@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Role check - relies on a document lookup.
+    // In a real app, you might use custom claims, but here we check the /users/ document.
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        getUserData().role == 'admin' || 
+        request.auth.token.email == 'etimedet2025@gmail.com'
+      );
+    }
+
+    function isReceptionist() {
+      return isSignedIn() && (getUserData().role == 'receptionist');
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['userId', 'email', 'role', 'createdAt']) &&
+             data.keys().size() == 5 && // userId, email, role, createdAt, (plus displayName)
+             data.userId == request.auth.uid &&
+             data.email is string &&
+             data.role in ['user', 'admin', 'receptionist'] &&
+             data.createdAt == request.time;
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['title', 'status', 'priority', 'authorId', 'createdAt']) &&
+             data.title is string && data.title.size() <= 200 &&
+             data.status in ['pending', 'investigating', 'verified', 'closed'] &&
+             data.priority in ['low', 'medium', 'high', 'critical'] &&
+             data.authorId == request.auth.uid &&
+             data.createdAt == request.time;
+    }
+
+    // --- Rules ---
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && 
+                      incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'updatedAt']) &&
+                      incoming().userId == existing().userId;
+    }
+
+    match /reports/{reportId} {
+      allow get: if isSignedIn(); // Public knowledge as requested? Or restrict? 
+                                  // Requirement says "track reports", "browse verified community reports".
+      allow list: if isSignedIn(); // Requirement says "browse verified community reports".
+      
+      allow create: if isSignedIn() && isValidReport(incoming()) && isValidId(reportId);
+      
+      allow update: if (
+        // User can only update their own report and only specific fields OR Admin can update everything
+        (isOwner(existing().authorId) && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'updatedAt'])) ||
+        (isAdmin() || isReceptionist())
+      );
+
+      allow delete: if isAdmin();
+    }
+  }
+}
