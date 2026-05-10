@@ -16,7 +16,7 @@ const sizes = {
 export default function Logo({ className, size = 'md' }: LogoProps) {
   return (
     <img 
-      src="https://ais-pre-d3rwnfhanfj5jjpp35gprx-9261004885.europe-west3.run.app/logo.png" 
+      src="/logo.jpg" 
       alt="Ratel Logo" 
       className={cn(sizes[size], "object-contain rounded-full shadow-emerald-900/10", className)}
       referrerPolicy="no-referrer"

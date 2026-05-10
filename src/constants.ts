@@ -5,7 +5,7 @@
 export const BRAND = {
   name: "RATEL",
   tagline: "Bold Action. Secure Future.",
-  logo: "/logo.png", // Assuming the uploaded logo is available at /logo.png or similar
+  logo: "/logo.jpg", 
 };
 
 export const COLORS = {
